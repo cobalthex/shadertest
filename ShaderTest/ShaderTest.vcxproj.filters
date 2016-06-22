@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="DescriptorHeap.cpp">
+      <Filter>DX</Filter>
+    </ClCompile>
+    <ClCompile Include="DXManager.cpp">
+      <Filter>DX</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>DX</Filter>
+    </ClCompile>
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="pch.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ConstantBuffer.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="DescriptorHeap.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="DXManager.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="StbImage.hpp">
+      <Filter>DX</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="shaders.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Core">
+      <UniqueIdentifier>{4fda5ab1-68ec-4560-99ed-600539c553a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DX">
+      <UniqueIdentifier>{854b65bf-b0f5-46e9-9f5a-4ff5a320c9d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{1ce93d41-0d3a-474b-8455-e9204b416afd}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="VertexShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PixelShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="PixelShaderBase.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>
