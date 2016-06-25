@@ -2,6 +2,14 @@
 #include "App.h"
 #include "Utility.hpp"
 #include "d3dx12.hpp"
+#include "Resources.hpp"
+
+// Define the vertex input layout.
+D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+{
+	{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+};
 
 void App::Initialize()
 {
@@ -11,45 +19,62 @@ void App::Initialize()
 	auto& cmdAlloc = DXManager::GetCommandAllocator();
 
 	//create the root signature
-	//todo: add root params for constant buffers
 	{
-		D3D12_ROOT_SIGNATURE_DESC rootSigDesc;
-		rootSigDesc.NumParameters = 0;
-		rootSigDesc.pParameters = nullptr;
-		rootSigDesc.NumStaticSamplers = 0;
-		rootSigDesc.pStaticSamplers = nullptr;
-		rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		CD3DX12_DESCRIPTOR_RANGE range;
+		CD3DX12_ROOT_PARAMETER parameter;
 
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-		ThrowIfFailed(dev->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
+		//parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
+		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
+
+		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
+
+		CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
+		descRootSignature.Init(1, &parameter, 0, nullptr, rootSignatureFlags);
+
+		ComPtr<ID3DBlob> pSignature;
+		ComPtr<ID3DBlob> pError;
+		ThrowIfFailed(D3D12SerializeRootSignature(&descRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, pSignature.GetAddressOf(), pError.GetAddressOf()));
+		ThrowIfFailed(dev->CreateRootSignature(0, pSignature->GetBufferPointer(), pSignature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
 	}
 
 	// Create the pipeline state, which includes compiling and loading shaders.
 	{
-		ComPtr<ID3DBlob> vertexShader;
 		ComPtr<ID3DBlob> pixelShader;
 
 		// Enable better shader debugging with the graphics debugging tools
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
-		wchar_t basePath[512];
-		GetAssetsPath(basePath, _countof(basePath));
-		auto vspath = std::wstring(basePath) + L"VertexShader.hlsl";
-		(D3DCompileFromFile(vspath.c_str(), nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		auto pspath = std::wstring(basePath) + L"PixelShader.hlsl";
-		ThrowIfFailed(D3DCompileFromFile(pspath.c_str(), nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
-
-		// Define the vertex input layout.
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+		//vertex shader
 		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
+			HMODULE module = GetModuleHandle(NULL);
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_VSH), MAKEINTRESOURCE(TEXTFILE));
+			HGLOBAL rcd = LoadResource(module, rc);
+			DWORD sz = SizeofResource(module, rc);
+			auto data = LockResource(rcd);
 
-		// Describe and create the graphics pipeline state object (PSO).
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = { };
+			ThrowIfFailed(D3DCompile2(data, sz, "Vertex Shader", nullptr, nullptr, "main", "vs_5_0", compileFlags, 0, 0, nullptr, 0, &vertexShader, nullptr));
+
+			FreeResource(rcd);
+		}
+		//pixel shader
+		{
+			HMODULE module = GetModuleHandle(NULL);
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH), MAKEINTRESOURCE(TEXTFILE));
+			HGLOBAL rcd = LoadResource(module, rc);
+			DWORD sz = SizeofResource(module, rc);
+			auto data = LockResource(rcd);
+
+			ThrowIfFailed(D3DCompile2(data, sz, "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pixelShader, nullptr));
+
+			FreeResource(rcd);
+		}
+
+		// Describe and create the graphics pipeline state object (PSO)
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 		psoDesc.pRootSignature = rootSignature.Get();
 		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
@@ -68,11 +93,6 @@ void App::Initialize()
 
 	// Create the command list.
 	ThrowIfFailed(dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc.Get(), pipelineState.Get(), IID_PPV_ARGS(&commandList)));
-
-	auto viewport = DXManager::GetViewport();
-	frameValues.value.resolution.width = (UINT)viewport.Width;
-	frameValues.value.resolution.height = (UINT)viewport.Height;
-	frameValues.value.aspectRatio = viewport.Width / viewport.Height;
 
 	heap = DescriptorAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 32, true);
 	
@@ -133,27 +153,40 @@ void App::Initialize()
 	vertexBufferView.StrideInBytes = sizeof(Vertex);
 	vertexBufferView.SizeInBytes = vertexBufferSize;
 
-	frameValues = ConstantBuffer<CBFrameValues>(heap, DXManager::GetFrameCount());
+	frameValues = ConstantBuffer<CBFrameValues>(heap);
+	ZeroMemory(&frameValues.value, sizeof(frameValues.value));
 
 	ThrowIfFailed(commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 	DXManager::GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
 	DXManager::WaitForGpu();
+
+	auto viewport = DXManager::GetViewport();
+	frameValues.value.resolution.width = (UINT)viewport.Width;
+	frameValues.value.resolution.height = (UINT)viewport.Height;
+	frameValues.value.aspectRatio = viewport.Width / viewport.Height;
+
+	QueryPerformanceFrequency(&perfFreq);
+	QueryPerformanceCounter(&perfStart);
 }
 
 void App::Destroy()
 {
-
 }
 
+LARGE_INTEGER perfCount;
 void App::Update()
 {
-	POINT pos;
-	GetCursorPos(&pos);
-	frameValues.value.mouse.x = pos.x;
-	frameValues.value.mouse.y = pos.y;
+	POINT mp;
+	GetCursorPos(&mp);
+	ScreenToClient(DXManager::GetWindow(), &mp);
 
+	frameValues.value.mouse.x = mp.x;
+	frameValues.value.mouse.y = mp.y;
+
+	QueryPerformanceCounter(&perfCount);
+	frameValues.value.time = float(double(perfCount.QuadPart - perfStart.QuadPart) / perfFreq.QuadPart);
 	frameValues.Update();
 }
 
@@ -162,46 +195,56 @@ void App::Draw()
 	ThrowIfFailed(DXManager::GetCommandAllocator()->Reset());
 	ThrowIfFailed(commandList->Reset(DXManager::GetCommandAllocator().Get(), pipelineState.Get()));
 
-	PIXBeginEvent(commandList.Get(), 0, L"Draw");
-	{
-		// Set the graphics root signature and descriptor heaps to be used by this frame.
-		commandList->SetGraphicsRootSignature(rootSignature.Get());
-		ID3D12DescriptorHeap* ppHeaps[] = { heap };
-		commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+	// Set the graphics root signature and descriptor heaps to be used by this frame.
+	commandList->SetGraphicsRootSignature(rootSignature.Get());
+	ID3D12DescriptorHeap* ppHeaps[] = { heap };
+	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
-		// Bind the current frame's constant buffer to the pipeline
-		//heap.GetHandle(DXManager::GetCurrentFrame()).Bind(commandList, 0);
+	// Bind the current frame's constant buffer to the pipeline
+	//commandList->SetComputeRootConstantBufferView(0, frameValues.GetAddress());
+	heap.GetHandle(DXManager::GetCurrentFrame()).BindToTable(commandList, 0);
 
-		// Set the viewport and scissor rectangle
-		commandList->RSSetViewports(1, &DXManager::GetViewport());
-		commandList->RSSetScissorRects(1, &DXManager::GetScissorRect());
+	// Set the viewport and scissor rectangle
+	commandList->RSSetViewports(1, &DXManager::GetViewport());
+	commandList->RSSetScissorRects(1, &DXManager::GetScissorRect());
 
-		// Indicate this resource will be in use as a render target.
-		CD3DX12_RESOURCE_BARRIER renderTargetResourceBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(DXManager::GetRenderTarget().Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		commandList->ResourceBarrier(1, &renderTargetResourceBarrier);
+	//mark the render target for rendering
+	CD3DX12_RESOURCE_BARRIER renderTargetResourceBarrier =
+		CD3DX12_RESOURCE_BARRIER::Transition(DXManager::GetRenderTarget().Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	commandList->ResourceBarrier(1, &renderTargetResourceBarrier);
 
-		// Record drawing commands.
-		D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = DXManager::GetRenderTargetView();
-		//D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = DXManager::GetDepthStencilView();
-		float clearColor[] = { 0.5f, 0.75f, 1.f, 1.f };
-		commandList->ClearRenderTargetView(renderTargetView, clearColor, 0, nullptr);
-		//commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	// Record drawing commands.
+	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = DXManager::GetRenderTargetView();
+	//D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = DXManager::GetDepthStencilView();
+	float clearColor[] = { 0.5f, 0.75f, 1.f, 1.f };
+	commandList->ClearRenderTargetView(renderTargetView, clearColor, 0, nullptr);
+	//commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-		commandList->OMSetRenderTargets(1, &renderTargetView, false, nullptr /*&depthStencilView*/);
+	commandList->OMSetRenderTargets(1, &renderTargetView, false, nullptr /*&depthStencilView*/);
 
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-		commandList->DrawInstanced(4, 1, 0, 0);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+	commandList->DrawInstanced(4, 1, 0, 0);
 
-		// Indicate that the render target will now be used to present when the command list is done executing.
-		CD3DX12_RESOURCE_BARRIER presentResourceBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(DXManager::GetRenderTarget().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		commandList->ResourceBarrier(1, &presentResourceBarrier);
-	}
-	PIXEndEvent(commandList.Get());
+	// Indicate that the render target will now be used to present when the command list is done executing.
+	CD3DX12_RESOURCE_BARRIER presentResourceBarrier =
+		CD3DX12_RESOURCE_BARRIER::Transition(DXManager::GetRenderTarget().Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	commandList->ResourceBarrier(1, &presentResourceBarrier);
 
 	ThrowIfFailed(commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 	DXManager::GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+}
+
+HRESULT App::UpdatePixelShader(void* Code, size_t CodeSize, ID3DBlob** ErrorMessages)
+{
+	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+	ComPtr<ID3DBlob> pshader;
+	HRESULT hr = D3DCompile2(Code, CodeSize, "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pshader, ErrorMessages);
+	
+	if (FAILED(hr))
+		return hr;
+
+	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pshader.Get());
+	return DXManager::GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState));
 }

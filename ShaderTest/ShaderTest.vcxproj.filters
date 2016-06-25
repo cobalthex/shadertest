@@ -44,9 +44,9 @@
     <ClInclude Include="pch.hpp">
       <Filter>Core</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="shaders.hlsl" />
+    <ClInclude Include="Resources.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Core">
@@ -60,16 +60,19 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="VertexShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="PixelShader.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="PixelShaderBase.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="VertexShader.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="PixelShader.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources.rc">
+      <Filter>Core</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

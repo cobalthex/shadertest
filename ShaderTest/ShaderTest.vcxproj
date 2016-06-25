@@ -115,6 +115,7 @@
     <ClInclude Include="ConstantBuffer.hpp" />
     <ClInclude Include="DescriptorHeap.hpp" />
     <ClInclude Include="DXManager.hpp" />
+    <ClInclude Include="Resources.hpp" />
     <ClInclude Include="StbImage.hpp" />
     <ClInclude Include="Texture.hpp" />
     <ClInclude Include="d3dx12.hpp" />
@@ -130,29 +131,25 @@
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">pch.hpp</PrecompiledHeaderFile>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="shaders.hlsl">
-      <FileType>Document</FileType>
-      <DeploymentContent>true</DeploymentContent>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="PixelShader.hlsl">
+    <None Include="PixelShader.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <FileType>Document</FileType>
-    </FxCompile>
-    <FxCompile Include="VertexShader.hlsl">
+    </None>
+    <None Include="VertexShader.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
-    </FxCompile>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="PixelShaderBase.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

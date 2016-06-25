@@ -6,6 +6,8 @@ namespace
 {
 	bool isInitialized = false;
 
+	HWND hWnd;
+
 	const UINT FrameCount = 2;
 
 	UINT currentFrame = 0;
@@ -28,6 +30,8 @@ namespace
 void DXManager::Initialize(HWND Window, bool UseWarpDevice)
 {
 	isInitialized = false;
+
+	hWnd = Window;
 
 	RECT wndRect;
 	GetClientRect(Window, &wndRect);
@@ -195,6 +199,11 @@ bool DXManager::IsInitialized()
 	return isInitialized;
 }
 
+HWND DXManager::GetWindow()
+{
+	return hWnd;
+}
+
 UINT64 DXManager::GetCurrentFrame()
 {
 	return currentFrame;
@@ -281,4 +290,39 @@ void DXManager::NextFrame()
 
 	// Set the fence value for the next frame.
 	fenceValues[currentFrame] = currentFenceValue + 1;
+}
+
+bool run = false;
+void DXManager::Resize(int Width, int Height)
+{
+	if (!run)
+	{
+		run = true;
+		return;
+	}
+
+	//todo: sometimes crashes when resizing; fix
+
+	if (swapChain == nullptr)
+		return;
+	
+	for (UINT i = 0; i < FrameCount; i++)
+		renderTargets[i].Reset();
+
+	ThrowIfFailed(swapChain->ResizeBuffers(FrameCount, Width, Height, DXGI_FORMAT_UNKNOWN, 0));
+
+	auto rtvHandle = rtvHeap.GetHandle(0);
+	for (UINT i = 0; i < FrameCount; i++)
+	{
+		//render targets
+		ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
+		device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle.GetCpuHandle());
+		rtvHeap.Increment(rtvHandle);
+
+		viewport.Width = (float)Width;
+		viewport.Height = (float)Height;
+
+		scissorRect.right = scissorRect.left + Width;
+		scissorRect.bottom = scissorRect.top + Height;
+	}
 }

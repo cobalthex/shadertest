@@ -17,9 +17,9 @@ enum MouseState : UINT
 
 struct CBFrameValues
 {
+	struct { UINT x, y, state, scroll; } mouse;
 	struct { UINT width, height; } resolution;
 	float aspectRatio;
-	struct { UINT x, y, state, scroll; } mouse;
 	float time; //in seconds
 };
 
@@ -35,8 +35,11 @@ public:
 	void Update();
 	void Draw();
 
+	HRESULT UpdatePixelShader(void* Code, size_t CodeSize, ID3DBlob** ErrorMessages);
+
 private:
 	ComPtr<ID3D12RootSignature> rootSignature;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = { };
 	ComPtr<ID3D12PipelineState> pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> commandList;
 
@@ -45,4 +48,8 @@ private:
 	ComPtr<ID3D12Resource> vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	ConstantBuffer<CBFrameValues> frameValues;
+
+	ComPtr<ID3DBlob> vertexShader;
+
+	LARGE_INTEGER perfStart, perfFreq;
 };

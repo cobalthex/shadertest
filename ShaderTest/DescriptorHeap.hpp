@@ -44,7 +44,7 @@ public:
 	inline bool IsNull() const { return cpuHandle.ptr == Null; }
 	inline bool IsShaderVisible() const { return gpuHandle.ptr != Null; }
 
-	inline void Bind(const ComPtr<ID3D12GraphicsCommandList>& CommandList, UINT RootParameterIndex) const
+	inline void BindToTable(const ComPtr<ID3D12GraphicsCommandList>& CommandList, UINT RootParameterIndex) const
 	{
 		CommandList->SetGraphicsRootDescriptorTable(RootParameterIndex, gpuHandle);
 	}

@@ -9,8 +9,11 @@ namespace DXManager
 {
 	void Initialize(HWND Window, bool UseWarpDevice = false);
 	void Destroy();
+	void Resize(int Width, int Height);
 
 	bool IsInitialized();
+
+	HWND GetWindow(); //get the window that the device is rendering to
 
 	ComPtr<ID3D12Device>& GetDevice();
 	ComPtr<IDXGISwapChain3>& GetSwapChain();

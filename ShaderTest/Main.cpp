@@ -12,10 +12,14 @@
 #include "pch.hpp"
 #include "DXManager.hpp"
 #include "App.h"
+#include "Resources.hpp"
+
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 App app;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK DXProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
@@ -26,79 +30,244 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	//pSample->ParseCommandLineArgs(argv, argc);
 	LocalFree(argv);
 
-	// Initialize the window class.
-	WNDCLASSEX windowClass = { 0 };
-	windowClass.cbSize = sizeof(WNDCLASSEX);
-	windowClass.style = CS_HREDRAW | CS_VREDRAW;
-	windowClass.lpfnWndProc = WindowProc;
-	windowClass.hInstance = hInstance;
-	windowClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	windowClass.lpszClassName = L"DXSampleClass";
-	RegisterClassEx(&windowClass);
-
 	RECT windowRect = { 0, 0, 800, 600 }; //initial rect
-	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
-	// Create the window and store a handle to it.
+	WNDCLASSEX wclass = { 0 };
+	wclass.cbSize = sizeof(WNDCLASSEX);
+	wclass.style = CS_HREDRAW | CS_VREDRAW;
+	wclass.lpfnWndProc = WindowProc;
+	wclass.hInstance = hInstance;
+	wclass.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wclass.lpszClassName = L"AppWindowClass";
+	wclass.hbrBackground = (HBRUSH)COLOR_WINDOW;
+	RegisterClassEx(&wclass);
+
 	HWND hwnd = CreateWindow
 	(
-		windowClass.lpszClassName,
+		wclass.lpszClassName,
 		L"Shader Tester",
-		WS_OVERLAPPEDWINDOW,
+		WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,
 		windowRect.right - windowRect.left,
 		windowRect.bottom - windowRect.top,
-		nullptr,		// We have no parent window.
-		nullptr,		// We aren't using menus.
-		hInstance, 
+		nullptr,
+		nullptr,
+		hInstance,
 		nullptr
 	);
 
-	DXManager::Initialize(hwnd);
-	app.Initialize();
-
 	ShowWindow(hwnd, nCmdShow);
 
-	// Main sample loop.
 	MSG msg = { };
 	while (msg.message != WM_QUIT)
 	{
-		// Process any messages in the queue.
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+
+		app.Update();
+		app.Draw();
+		DXManager::Present();
 	}
 
-	// Return this part of the WM_QUIT message to Windows.
+	app.Destroy();
+	DXManager::Destroy();
+
 	return static_cast<char>(msg.wParam);
 }
 
-// Main message handler for the sample.
+HWND hDx;
+HWND hEdit;
+HWND hBtn;
+
+WNDPROC pEditProc;
+LRESULT CALLBACK EditProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (msg == WM_KEYDOWN)
+	{
+		bool isCtrl = GetKeyState(VK_CONTROL) & 0x8000;
+		
+		if (isCtrl && wParam == 'A')
+			SendMessage(hWnd, EM_SETSEL, 0, -1);
+		else if (isCtrl && wParam == VK_RETURN)
+		{
+			SendMessage(hBtn, BM_CLICK, 0, 0);
+			return 0;
+		}
+	}
+	return CallWindowProc(pEditProc, hWnd, msg, wParam, lParam);
+}
+#define BUTTON_ID 0x8801
+
+UINT sidebarWidth = 400;
+
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
 	case WM_CREATE:
-		return 0;
+		{
+			RECT wndRect;
+			GetClientRect(hWnd, &wndRect);
+			HINSTANCE hinst = GetModuleHandle(NULL);
+			HGDIOBJ hDefaultFont = GetStockObject(DEFAULT_GUI_FONT);
 
-	case WM_KEYDOWN:
-		return 0;
+			//initialize DX render window
+			{
+				WNDCLASSEX wclass = { 0 };
+				wclass.cbSize = sizeof(WNDCLASSEX);
+				wclass.style = CS_HREDRAW | CS_VREDRAW;
+				wclass.lpfnWndProc = DXProc;
+				wclass.hInstance = hinst;
+				wclass.hCursor = LoadCursor(NULL, IDC_ARROW);
+				wclass.lpszClassName = L"RenderWindowClass";
+				RegisterClassEx(&wclass);
 
-	case WM_KEYUP:
-		return 0;
+				hDx = CreateWindow
+				(
+					wclass.lpszClassName,
+					L"Render Window",
+					WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+					sidebarWidth,
+					0,
+					wndRect.right - wndRect.left - sidebarWidth,
+					wndRect.bottom - wndRect.top,
+					hWnd,
+					NULL,
+					hinst,
+					nullptr
+				);
 
-	case WM_PAINT:
-		app.Update();
-		app.Draw();
-		DXManager::Present();
-		return 0;
+				DXManager::Initialize(hDx);
+				app.Initialize();
+			}
+
+			{
+				HMODULE module = GetModuleHandle(NULL);
+				HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH), MAKEINTRESOURCE(TEXTFILE));
+				HGLOBAL rcd = LoadResource(module, rc);
+				DWORD sz = SizeofResource(module, rc);
+				auto data = LockResource(rcd);
+				auto wstr = std::wstring((char*)data, (char*)data + sz);
+
+				hEdit = CreateWindowEx
+				(
+					WS_EX_CLIENTEDGE,
+					L"EDIT",
+					wstr.c_str(),
+					WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+					10,
+					10,
+					sidebarWidth - 20,
+					400,
+					hWnd,
+					NULL,
+					hinst,
+					nullptr
+				);
+				FreeResource(rcd);
+
+				//add custom window procedure for additional features
+				pEditProc = (WNDPROC)SetWindowLongPtr(hEdit, GWLP_WNDPROC, (LONG_PTR)&EditProc);
+
+				SendMessage(hEdit, WM_SETFONT, (WPARAM)hDefaultFont, MAKELPARAM(FALSE, 0));
+			}
+
+			{
+				hBtn = CreateWindowEx
+				(
+					0,
+					L"BUTTON",
+					L"Update",
+					WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+					10,
+					420,
+					sidebarWidth - 20,
+					22,
+					hWnd,
+					(HMENU)BUTTON_ID,
+					hinst,
+					nullptr
+				);
+				SendMessage(hBtn, WM_SETFONT, (WPARAM)hDefaultFont, MAKELPARAM(FALSE, 0));
+
+				HWND hTip = CreateWindowEx
+				(
+					NULL,
+					TOOLTIPS_CLASS,
+					nullptr,
+					WS_POPUP,
+					CW_USEDEFAULT, 
+					CW_USEDEFAULT,
+					CW_USEDEFAULT, 
+					CW_USEDEFAULT,
+					hBtn,
+					NULL,
+					hinst,
+					nullptr
+				);
+
+				TOOLINFO tool = { };
+				tool.cbSize = sizeof(tool);
+				tool.hwnd = hTip;
+				tool.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
+				tool.hinst = hinst;
+				tool.lpszText = L"You can also use [CTRL+ENTER] in the Edit box to update the shader";
+				tool.uId = (UINT_PTR)hBtn;
+
+				SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&tool);
+			}
+
+			break;
+		}
+
+	case WM_SIZE:
+		{
+			SetWindowPos(hDx, NULL, 0, 0, LOWORD(lParam) - sidebarWidth, HIWORD(lParam), SWP_NOMOVE | SWP_NOOWNERZORDER);
+			break;
+		}
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == BUTTON_ID)
+		{
+			EnableWindow(hEdit, false);
+
+			static char text[65536];
+			size_t written = SendMessageA(hEdit, WM_GETTEXT, (WPARAM)_countof(text), (LPARAM)text);
+			ComPtr<ID3DBlob> errors;
+			auto hr = app.UpdatePixelShader(text, written, &errors);
+			if (!SUCCEEDED(hr))
+			{
+				if (errors != nullptr)
+					MessageBoxA(hWnd, (char*)errors->GetBufferPointer(), "Error compiling shader", MB_OK | MB_ICONERROR);
+				else
+					MessageBox(hWnd, L"Unknown Error", L"Error compiling shader", MB_OK | MB_ICONERROR);
+			}
+
+			EnableWindow(hEdit, true);
+		}
+		break;
+
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+	}
+
+	// Handle any messages the switch statement didn't.
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
+
+LRESULT CALLBACK DXProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_SIZE:
+		DXManager::Resize(LOWORD(lParam), HIWORD(lParam));
+		break;
 	}
 
 	// Handle any messages the switch statement didn't.
