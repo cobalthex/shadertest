@@ -29,7 +29,7 @@ namespace DXManager
 	UINT64 GetFrameCount(); //get the number of render frames
 
 	void WaitForGpu();
-	void NextFrame();
 
-	void Present();
+	void Begin();
+	void End();
 };

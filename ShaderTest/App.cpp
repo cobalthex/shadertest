@@ -208,7 +208,6 @@ void App::Update()
 
 void App::Draw()
 {
-	ThrowIfFailed(DXManager::GetCommandAllocator()->Reset());
 	ThrowIfFailed(commandList->Reset(DXManager::GetCommandAllocator().Get(), pipelineState.Get()));
 
 	// Set the graphics root signature and descriptor heaps to be used by this frame.

@@ -250,12 +250,9 @@ D3D12_RECT DXManager::GetScissorRect()
 	return scissorRect;
 }
 
-void DXManager::Present()
+void DXManager::Begin()
 {
-	ThrowIfFailed(swapChain->Present(1, 0));
-
-	//todo: handle device removed
-	NextFrame();
+	ThrowIfFailed(commandAllocators[currentFrame]->Reset());
 }
 
 void DXManager::WaitForGpu()
@@ -271,7 +268,7 @@ void DXManager::WaitForGpu()
 	InterlockedIncrement(&fenceValues[currentFrame]);
 }
 
-void DXManager::NextFrame()
+void NextFrame()
 {
 	// Schedule a Signal command in the queue.
 	const UINT64 currentFenceValue = fenceValues[currentFrame];
@@ -291,9 +288,18 @@ void DXManager::NextFrame()
 	fenceValues[currentFrame] = currentFenceValue + 1;
 }
 
+void DXManager::End()
+{
+	ThrowIfFailed(swapChain->Present(1, 0));
+
+	//todo: handle device removed
+	NextFrame();
+}
+
+
 void DXManager::Resize(int Width, int Height)
 {
-	if (device == nullptr)
+	if (swapChain == nullptr)
 		return;
 
 	WaitForGpu();
@@ -304,9 +310,6 @@ void DXManager::Resize(int Width, int Height)
 		fenceValues[i] = fenceValues[currentFrame];
 	}
 
-	if (swapChain == nullptr)
-		return;
-
 	ThrowIfFailed(swapChain->ResizeBuffers(FrameCount, Width, Height, DXGI_FORMAT_UNKNOWN, 0));
 
 	auto rtvHandle = rtvHeap.GetHandle(0);
@@ -316,11 +319,13 @@ void DXManager::Resize(int Width, int Height)
 		ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&renderTargets[i])));
 		device->CreateRenderTargetView(renderTargets[i].Get(), nullptr, rtvHandle.GetCpuHandle());
 		rtvHeap.Increment(rtvHandle);
-
-		viewport.Width = (float)Width;
-		viewport.Height = (float)Height;
-
-		scissorRect.right = scissorRect.left + Width;
-		scissorRect.bottom = scissorRect.top + Height;
 	}
+
+	viewport.Width = (float)Width;
+	viewport.Height = (float)Height;
+
+	scissorRect.right = scissorRect.left + Width;
+	scissorRect.bottom = scissorRect.top + Height;
+
+	currentFrame = swapChain->GetCurrentBackBufferIndex();
 }
