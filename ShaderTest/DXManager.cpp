@@ -17,19 +17,17 @@ namespace
 	D3D12_RECT scissorRect;
 	ComPtr<IDXGISwapChain3> swapChain;
 	ComPtr<ID3D12Device> device;
-	ComPtr<ID3D12Resource> renderTargets[FrameCount];
 	ComPtr<ID3D12CommandAllocator> commandAllocators[FrameCount];
 	ComPtr<ID3D12CommandQueue> commandQueue;
 	ComPtr<ID3D12RootSignature> rootSignature;
 
+	ComPtr<ID3D12Resource> renderTargets[FrameCount];
 	DescriptorHeap rtvHeap;
 };
 
 void DXManager::Initialize(HWND Window, bool UseWarpDevice)
 {
 	isInitialized = false;
-
-	hWnd = Window;
 
 	RECT wndRect;
 	GetClientRect(Window, &wndRect);
@@ -255,6 +253,7 @@ D3D12_RECT DXManager::GetScissorRect()
 void DXManager::Present()
 {
 	ThrowIfFailed(swapChain->Present(1, 0));
+
 	//todo: handle device removed
 	NextFrame();
 }
@@ -292,22 +291,21 @@ void DXManager::NextFrame()
 	fenceValues[currentFrame] = currentFenceValue + 1;
 }
 
-bool run = false;
 void DXManager::Resize(int Width, int Height)
 {
-	if (!run)
-	{
-		run = true;
+	if (device == nullptr)
 		return;
-	}
 
-	//todo: sometimes crashes when resizing; fix
+	WaitForGpu();
+
+	for (UINT i = 0; i < FrameCount; i++)
+	{
+		renderTargets[i].Reset();
+		fenceValues[i] = fenceValues[currentFrame];
+	}
 
 	if (swapChain == nullptr)
 		return;
-	
-	for (UINT i = 0; i < FrameCount; i++)
-		renderTargets[i].Reset();
 
 	ThrowIfFailed(swapChain->ResizeBuffers(FrameCount, Width, Height, DXGI_FORMAT_UNKNOWN, 0));
 

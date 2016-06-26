@@ -10,7 +10,7 @@
 //*********************************************************
 
 #pragma once
-
+/*
 inline void ThrowIfFailed(HRESULT hr)
 {
 	if (FAILED(hr))
@@ -22,6 +22,16 @@ inline void ThrowIfFailed(HRESULT hr)
 		throw buffer;
 	}
 }
+*/
+#define ThrowIfFailed(hr) \
+	if (FAILED(hr)) { \
+		TCHAR buffer[512]; \
+		_sntprintf_s(buffer, _countof(buffer), TEXT(">>> Error (HR 0x%X): "), hr); \
+		OutputDebugString(buffer); \
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, hr, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buffer, _countof(buffer), nullptr); \
+		OutputDebugString(buffer); \
+		throw; \
+	} \
 
 inline void GetAssetsPath(_Out_writes_(pathSize) WCHAR* path, UINT pathSize)
 {
