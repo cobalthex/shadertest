@@ -35,7 +35,7 @@ public:
 	void Update();
 	void Draw();
 
-	HRESULT UpdatePixelShader(void* Code, size_t CodeSize, ID3DBlob** ErrorMessages);
+	HRESULT UpdatePixelShader(const std::vector<BYTE>& Code, ID3DBlob** ErrorMessages);
 
 private:
 	ComPtr<ID3D12RootSignature> rootSignature;
@@ -48,8 +48,10 @@ private:
 	ComPtr<ID3D12Resource> vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	ConstantBuffer<CBFrameValues> frameValues;
-
-	ComPtr<ID3DBlob> vertexShader;
+	std::vector<Texture> textues;
 
 	LARGE_INTEGER perfStart, perfFreq;
+
+	ComPtr<ID3DBlob> vertexShader;
+	std::vector<BYTE> psBase; //shader includes
 };

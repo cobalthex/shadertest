@@ -88,7 +88,7 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	if (msg == WM_KEYDOWN)
 	{
-		bool isCtrl = GetKeyState(VK_CONTROL) & 0x8000;
+		bool isCtrl = (GetKeyState(VK_CONTROL) & 0x8000) > 0;
 		
 		if (isCtrl && wParam == 'A')
 			SendMessage(hWnd, EM_SETSEL, 0, -1);
@@ -103,6 +103,8 @@ LRESULT CALLBACK EditProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #define BUTTON_ID 0x8801
 
 UINT sidebarWidth = 400;
+UINT margin = 10;
+auto buttonHeight = 24;
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -159,10 +161,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					L"EDIT",
 					wstr.c_str(),
 					WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-					10,
-					10,
-					sidebarWidth - 20,
-					400,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
 					hWnd,
 					NULL,
 					hinst,
@@ -183,10 +185,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					L"BUTTON",
 					L"Update",
 					WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-					10,
-					420,
-					sidebarWidth - 20,
-					22,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
+					CW_USEDEFAULT,
 					hWnd,
 					(HMENU)BUTTON_ID,
 					hinst,
@@ -217,7 +219,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				tool.hinst = hinst;
 				tool.lpszText = L"You can also use [CTRL+ENTER] in the Edit box to update the shader";
 				tool.uId = (UINT_PTR)hBtn;
-
+				
 				SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&tool);
 			}
 
@@ -226,7 +228,15 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 	case WM_SIZE:
 		{
-			SetWindowPos(hDx, NULL, 0, 0, LOWORD(lParam) - sidebarWidth, HIWORD(lParam), SWP_NOMOVE | SWP_NOOWNERZORDER);
+			auto width = LOWORD(lParam);
+			auto height = HIWORD(lParam);
+
+			auto editHeight = height - (margin * 3) - buttonHeight;
+
+			SetWindowPos(hEdit, NULL, margin, margin, sidebarWidth - (margin * 2), editHeight, SWP_NOOWNERZORDER);
+			SetWindowPos(hBtn, NULL, margin, editHeight + (margin * 2), sidebarWidth - (margin * 2), buttonHeight, SWP_NOOWNERZORDER);
+
+			SetWindowPos(hDx, NULL, sidebarWidth, 0, width - sidebarWidth, height, SWP_NOOWNERZORDER);
 			break;
 		}
 
@@ -235,10 +245,11 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 		{
 			EnableWindow(hEdit, false);
 
-			static char text[65536];
-			size_t written = SendMessageA(hEdit, WM_GETTEXT, (WPARAM)_countof(text), (LPARAM)text);
+			auto tLen = GetWindowTextLength(hEdit) + 1;
+			std::vector<BYTE> data (tLen);
+			size_t written = SendMessageA(hEdit, WM_GETTEXT, tLen, (LPARAM)data.data());
 			ComPtr<ID3DBlob> errors;
-			auto hr = app.UpdatePixelShader(text, written, &errors);
+			auto hr = app.UpdatePixelShader(data, &errors);
 			if (!SUCCEEDED(hr))
 			{
 				if (errors != nullptr)
@@ -246,7 +257,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				else
 					MessageBox(hWnd, L"Unknown Error", L"Error compiling shader", MB_OK | MB_ICONERROR);
 			}
-
+			
 			EnableWindow(hEdit, true);
 		}
 		break;

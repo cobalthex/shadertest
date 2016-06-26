@@ -6,8 +6,6 @@ namespace
 {
 	bool isInitialized = false;
 
-	HWND hWnd;
-
 	const UINT FrameCount = 2;
 
 	UINT currentFrame = 0;
@@ -201,7 +199,9 @@ bool DXManager::IsInitialized()
 
 HWND DXManager::GetWindow()
 {
-	return hWnd;
+	HWND hwnd = NULL;
+	swapChain->GetHwnd(&hwnd);
+	return hwnd;
 }
 
 UINT64 DXManager::GetCurrentFrame()
@@ -252,6 +252,13 @@ D3D12_RECT DXManager::GetScissorRect()
 	return scissorRect;
 }
 
+void DXManager::Present()
+{
+	ThrowIfFailed(swapChain->Present(1, 0));
+	//todo: handle device removed
+	NextFrame();
+}
+
 void DXManager::WaitForGpu()
 {
 	//Schedule a Signal command in the queue
@@ -263,13 +270,6 @@ void DXManager::WaitForGpu()
 
 	//Increment the fence value for the current frame
 	InterlockedIncrement(&fenceValues[currentFrame]);
-}
-
-void DXManager::Present()
-{
-	ThrowIfFailed(swapChain->Present(1, 0));
-	//todo: handle device removed
-	NextFrame();
 }
 
 void DXManager::NextFrame()

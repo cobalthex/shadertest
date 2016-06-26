@@ -44,6 +44,18 @@ void App::Initialize()
 
 	// Create the pipeline state, which includes compiling and loading shaders.
 	{
+		//load pixel shader base
+		{
+			HMODULE module = GetModuleHandle(NULL);
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH_BASE), MAKEINTRESOURCE(TEXTFILE));
+			HGLOBAL rcd = LoadResource(module, rc);
+			DWORD sz = SizeofResource(module, rc);
+			auto data = LockResource(rcd);
+
+			psBase = std::vector<BYTE>((BYTE*)data, (BYTE*)data + sz);
+			FreeResource(rcd);
+		}
+
 		ComPtr<ID3DBlob> pixelShader;
 
 		// Enable better shader debugging with the graphics debugging tools
@@ -69,7 +81,11 @@ void App::Initialize()
 			DWORD sz = SizeofResource(module, rc);
 			auto data = LockResource(rcd);
 
-			ThrowIfFailed(D3DCompile2(data, sz, "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pixelShader, nullptr));
+			std::vector<BYTE> psh (sz + psBase.size());
+			psh.insert(psh.begin(), psBase.begin(), psBase.end());
+			psh.insert(psh.begin() + psBase.size(), (BYTE*)data, (BYTE*)data + sz);
+
+			ThrowIfFailed(D3DCompile2(psh.data(), psh.size(), "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pixelShader, nullptr));
 
 			FreeResource(rcd);
 		}
@@ -236,11 +252,16 @@ void App::Draw()
 	DXManager::GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
 
-HRESULT App::UpdatePixelShader(void* Code, size_t CodeSize, ID3DBlob** ErrorMessages)
+HRESULT App::UpdatePixelShader(const std::vector<BYTE>& Code, ID3DBlob** ErrorMessages)
 {
+	//prepend header
+	std::vector<BYTE> psh(Code.size() + psBase.size());
+	psh.insert(psh.begin(), psBase.begin(), psBase.end());
+	psh.insert(psh.begin() + psBase.size(), Code.begin(), Code.end());
+
 	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 	ComPtr<ID3DBlob> pshader;
-	HRESULT hr = D3DCompile2(Code, CodeSize, "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pshader, ErrorMessages);
+	HRESULT hr = D3DCompile2(psh.data(), psh.size(), "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pshader, ErrorMessages);
 	
 	if (FAILED(hr))
 		return hr;
