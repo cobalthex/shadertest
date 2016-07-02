@@ -32,4 +32,7 @@ namespace DXManager
 
 	void Begin();
 	void End();
+
+	extern const char* PixelShaderProfiles[]; //All of the available pixel shader models, from newest to oldest
+	extern const size_t NumPixelShaderProfiles;
 };

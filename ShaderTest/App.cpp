@@ -4,6 +4,8 @@
 #include "d3dx12.hpp"
 #include "Resources.hpp"
 
+#define MAX_TEXTURES 32
+
 // Define the vertex input layout.
 D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 {
@@ -21,11 +23,26 @@ void App::Initialize()
 	//create the root signature
 	{
 		CD3DX12_DESCRIPTOR_RANGE range;
-		CD3DX12_ROOT_PARAMETER parameter;
+		CD3DX12_ROOT_PARAMETER parameters[2];
 
-		//parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_PIXEL);
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-		parameter.InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
+		parameters[0].InitAsConstantBufferView(0);
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_TEXTURES, 0);
+		parameters[1].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_PIXEL);
+
+		D3D12_STATIC_SAMPLER_DESC sampler = { };
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.MipLODBias = 0;
+		sampler.MaxAnisotropy = 1;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		sampler.ShaderRegister = 0;
+		sampler.RegisterSpace = 0;
+		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -34,11 +51,12 @@ void App::Initialize()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS;
 
 		CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
-		descRootSignature.Init(1, &parameter, 0, nullptr, rootSignatureFlags);
+		descRootSignature.Init(_countof(parameters), parameters, 1, &sampler, rootSignatureFlags);
 
 		ComPtr<ID3DBlob> pSignature;
 		ComPtr<ID3DBlob> pError;
-		ThrowIfFailed(D3D12SerializeRootSignature(&descRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, pSignature.GetAddressOf(), pError.GetAddressOf()));
+		D3D12SerializeRootSignature(&descRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, pSignature.GetAddressOf(), pError.GetAddressOf());
+	//	char* e = (char*)pError->GetBufferPointer();
 		ThrowIfFailed(dev->CreateRootSignature(0, pSignature->GetBufferPointer(), pSignature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
 	}
 
@@ -47,7 +65,7 @@ void App::Initialize()
 		//load pixel shader base
 		{
 			HMODULE module = GetModuleHandle(NULL);
-			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH_BASE), MAKEINTRESOURCE(TEXTFILE));
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_PSH_BASE), MAKEINTRESOURCE(TEXTFILE));
 			HGLOBAL rcd = LoadResource(module, rc);
 			DWORD sz = SizeofResource(module, rc);
 			auto data = LockResource(rcd);
@@ -64,7 +82,7 @@ void App::Initialize()
 		//vertex shader
 		{
 			HMODULE module = GetModuleHandle(NULL);
-			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_VSH), MAKEINTRESOURCE(TEXTFILE));
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_VSH), MAKEINTRESOURCE(TEXTFILE));
 			HGLOBAL rcd = LoadResource(module, rc);
 			DWORD sz = SizeofResource(module, rc);
 			auto data = LockResource(rcd);
@@ -76,7 +94,7 @@ void App::Initialize()
 		//pixel shader
 		{
 			HMODULE module = GetModuleHandle(NULL);
-			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH), MAKEINTRESOURCE(TEXTFILE));
+			HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_PSH), MAKEINTRESOURCE(TEXTFILE));
 			HGLOBAL rcd = LoadResource(module, rc);
 			DWORD sz = SizeofResource(module, rc);
 			auto data = LockResource(rcd);
@@ -164,13 +182,26 @@ void App::Initialize()
 		CD3DX12_RESOURCE_BARRIER::Transition(vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 	commandList->ResourceBarrier(1, &vertexBufferResourceBarrier);
 
-	// Initialize the vertex buffer view.
+	//create view
 	vertexBufferView.BufferLocation = vertexBuffer->GetGPUVirtualAddress();
 	vertexBufferView.StrideInBytes = sizeof(Vertex);
 	vertexBufferView.SizeInBytes = vertexBufferSize;
 
-	frameValues = ConstantBuffer<CBFrameValues>(heap);
+	frameValues.Create();
 	ZeroMemory(&frameValues.value, sizeof(frameValues.value));
+
+	//textures
+	textures = std::vector<Texture>(MAX_TEXTURES);
+	{
+		HMODULE module = GetModuleHandle(NULL);
+		HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_SAMPLE_PNG), MAKEINTRESOURCE(PNGFILE));
+		HGLOBAL rcd = LoadResource(module, rc);
+		DWORD sz = SizeofResource(module, rc);
+		auto data = LockResource(rcd);
+
+		textures[0] = Texture(data, sz, commandList, heap);
+		FreeResource(rcd);
+	}
 
 	ThrowIfFailed(commandList->Close());
 	ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
@@ -216,8 +247,8 @@ void App::Draw()
 	commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 
 	// Bind the current frame's constant buffer to the pipeline
-	//commandList->SetComputeRootConstantBufferView(0, frameValues.GetAddress());
-	heap.GetHandle(DXManager::GetCurrentFrame()).BindToTable(commandList, 0);
+	commandList->SetGraphicsRootConstantBufferView(0, frameValues.GetAddress());
+	commandList->SetGraphicsRootDescriptorTable(1, heap.GetHandle(0));
 
 	// Set the viewport and scissor rectangle
 	commandList->RSSetViewports(1, &DXManager::GetViewport());
@@ -231,8 +262,10 @@ void App::Draw()
 	// Record drawing commands.
 	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = DXManager::GetRenderTargetView();
 	//D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = DXManager::GetDepthStencilView();
-	float clearColor[] = { 0.5f, 0.75f, 1.f, 1.f };
-	commandList->ClearRenderTargetView(renderTargetView, clearColor, 0, nullptr);
+
+	if (clearOnDraw)
+		commandList->ClearRenderTargetView(renderTargetView, clearColor, 0, nullptr);
+	
 	//commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	commandList->OMSetRenderTargets(1, &renderTargetView, false, nullptr /*&depthStencilView*/);
@@ -251,7 +284,7 @@ void App::Draw()
 	DXManager::GetCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 }
 
-HRESULT App::UpdatePixelShader(const std::vector<BYTE>& Code, ID3DBlob** ErrorMessages)
+HRESULT App::UpdatePixelShader(const std::vector<BYTE>& Code, size_t ShaderProfile, ID3DBlob** ErrorMessages)
 {
 	//prepend header
 	std::vector<BYTE> psh(Code.size() + psBase.size());
@@ -260,11 +293,19 @@ HRESULT App::UpdatePixelShader(const std::vector<BYTE>& Code, ID3DBlob** ErrorMe
 
 	UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 	ComPtr<ID3DBlob> pshader;
-	HRESULT hr = D3DCompile2(psh.data(), psh.size(), "Pixel Shader", nullptr, nullptr, "main", "ps_5_0", compileFlags, 0, 0, nullptr, 0, &pshader, ErrorMessages);
+	HRESULT hr = D3DCompile2(psh.data(), psh.size(), "Pixel Shader", nullptr, nullptr, "main", DXManager::PixelShaderProfiles[ShaderProfile], compileFlags, 0, 0, nullptr, 0, &pshader, ErrorMessages);
 	
 	if (FAILED(hr))
 		return hr;
 
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pshader.Get());
 	return DXManager::GetDevice()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState));
+}
+
+bool App::LoadTexture(const std::vector<BYTE>& Data, size_t Slot)
+{
+	if (Slot >= textures.size())
+		return false;
+	//todo
+	return true;
 }

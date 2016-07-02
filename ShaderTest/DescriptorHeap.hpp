@@ -91,6 +91,7 @@ public:
 		: DescriptorHeap(Type, MaxCount, IsShaderVisible, Device), nextFreeHandle(firstHandle), numFreeDescriptors(MaxCount) { }
 	~DescriptorAllocator() = default;
 
+	//Allocate descriptors. Returns the first one
 	inline DescriptorHandle Allocate(size_t Count = 1)
 	{
 		assert(CountAvailable() >= Count); //"Descriptor Heap out of space - Increase heap size"
@@ -101,6 +102,7 @@ public:
 	}
 
 	inline size_t CountAvailable() const { return numFreeDescriptors; }
+	inline size_t CountUsed() const { return (nextFreeHandle.GetCpuHandle().ptr - firstHandle.GetCpuHandle().ptr) / descriptorSize; }
 
 private:
 	DescriptorHandle nextFreeHandle;

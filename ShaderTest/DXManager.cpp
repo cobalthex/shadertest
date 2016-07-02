@@ -2,6 +2,26 @@
 #include "DXManager.hpp"
 #include "Utility.hpp"
 
+const char* DXManager::PixelShaderProfiles[] = 
+{
+	"ps_5_1",
+	"ps_5_0",
+	"ps_4_1",
+	//todo: needs dynamic texture binding for this to work
+	/*"ps_4_0_level_9_3",
+	"ps_4_0_level_9_1",
+	"ps_4_0_level_9_0",
+	"ps_4_0",
+	"ps_3_sw",
+	"ps_3_0",
+	"ps_2_sw",
+	"ps_2_b",
+	"ps_2_a",
+	"ps_2_0"*/
+};
+
+const size_t DXManager::NumPixelShaderProfiles = _countof(DXManager::PixelShaderProfiles);
+
 namespace
 {
 	bool isInitialized = false;
@@ -53,7 +73,7 @@ void DXManager::Initialize(HWND Window, bool UseWarpDevice)
 #pragma region Adapter
 
 	ComPtr<IDXGIAdapter1> adapter;
-
+	
 	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != factory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
 	{
 		DXGI_ADAPTER_DESC1 desc;
@@ -185,9 +205,10 @@ void DXManager::Initialize(HWND Window, bool UseWarpDevice)
 
 void DXManager::Destroy()
 {
-	isInitialized = false;
-	WaitForGpu();
+	if (isInitialized)
+		WaitForGpu();
 	CloseHandle(fenceEvent);
+	isInitialized = false;
 }
 
 bool DXManager::IsInitialized()
@@ -310,7 +331,14 @@ void DXManager::Resize(int Width, int Height)
 		fenceValues[i] = fenceValues[currentFrame];
 	}
 
-	ThrowIfFailed(swapChain->ResizeBuffers(FrameCount, Width, Height, DXGI_FORMAT_UNKNOWN, 0));
+	auto hr = swapChain->ResizeBuffers(FrameCount, Width, Height, DXGI_FORMAT_UNKNOWN, 0);
+
+	if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+	{
+		//todo: handle device removed
+	}
+	else
+		ThrowIfFailed(hr);
 
 	auto rtvHandle = rtvHeap.GetHandle(0);
 	for (UINT i = 0; i < FrameCount; i++)

@@ -1,9 +1,9 @@
-static const uint MS_None = 0;
-static const uint MS_Left = 1;
-static const uint MS_Middle = 2;
-static const uint MS_Right = 4;
-static const uint MS_X1 = 8;
-static const uint MS_X2 = 16;
+#define MS_None   = 0
+#define MS_Left   = 1
+#define MS_Middle = 2
+#define MS_Right  = 4
+#define MS_X1     = 8
+#define MS_X2     = 16
 
 cbuffer CBFrameValues : register(b0)
 {
@@ -15,7 +15,15 @@ cbuffer CBFrameValues : register(b0)
 	float Time; //in seconds
 };
 
-Texture2D BackBuffer;
-Texture2D Textures[4]; //todo: dynamically generate
+#define MAX_TEXTURES 32
 
-SamplerState Samplers[4] : register(s0);
+Texture2D Textures[MAX_TEXTURES]; //todo: dynamically generate
+
+sampler SLinearClamp = sampler_state
+{
+	addressU = Clamp;
+	addressV = Clamp;
+	mipfilter = NONE;
+	minfilter = LINEAR;
+	magfilter = LINEAR;
+};

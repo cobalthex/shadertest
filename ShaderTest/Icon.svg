@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="32"
+   height="32"
+   viewBox="0 0 31.999999 31.999998"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="shtesticon.svg"
+   inkscape:export-filename="C:\Users\matt\Desktop\shtest256.png"
+   inkscape:export-xdpi="720"
+   inkscape:export-ydpi="720">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4274"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#000000;stop-opacity:0"
+         offset="0"
+         id="stop4280" />
+      <stop
+         id="stop4278"
+         offset="0.9"
+         style="stop-color:#5f00f0;stop-opacity:1" />
+      <stop
+         style="stop-color:#e085ff;stop-opacity:1"
+         offset="1"
+         id="stop4276" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4225">
+      <stop
+         id="stop4229"
+         offset="0"
+         style="stop-color:#3277ff;stop-opacity:1" />
+      <stop
+         style="stop-color:#3021a6;stop-opacity:1"
+         offset="0.5"
+         id="stop4239" />
+      <stop
+         id="stop4227"
+         offset="1"
+         style="stop-color:#000000;stop-opacity:1;" />
+    </linearGradient>
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4225"
+       id="radialGradient4231"
+       cx="20.608818"
+       cy="1029.2911"
+       fx="20.608818"
+       fy="1029.2911"
+       r="15.999998"
+       gradientUnits="userSpaceOnUse" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4274"
+       id="radialGradient4272"
+       cx="17.142855"
+       cy="1034.5051"
+       fx="17.142855"
+       fy="1034.5051"
+       r="10.999999"
+       gradientTransform="matrix(-0.9740249,0.97402746,-0.94249645,-0.94249645,1007.8578,1993.8248)"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="22.4"
+     inkscape:cx="10.054097"
+     inkscape:cy="8.5160403"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-1020.3622)">
+    <circle
+       style="opacity:1;fill:url(#radialGradient4231);fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path4136"
+       cx="15.999998"
+       cy="1036.3622"
+       r="14.999998" />
+    <path
+       style="opacity:0.5;fill:url(#radialGradient4272);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1.99999976;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 6.4918409,1028.3622 a 12.418049,12.439074 0 0 0 -4.4918411,9.5609 12.418049,12.439074 0 0 0 12.4180492,12.4391 12.418049,12.439074 0 0 0 9.581948,-4.5367 12.418049,12.439074 0 0 1 -7.926209,2.8782 12.418049,12.439074 0 0 1 -12.4180484,-12.4391 12.418049,12.439074 0 0 1 2.8361013,-7.9024 z"
+       id="circle4241"
+       inkscape:connector-curvature="0" />
+  </g>
+</svg>

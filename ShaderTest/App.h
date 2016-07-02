@@ -35,7 +35,13 @@ public:
 	void Update();
 	void Draw();
 
-	HRESULT UpdatePixelShader(const std::vector<BYTE>& Code, ID3DBlob** ErrorMessages);
+	//Shader Profile is index from DXManager::PixelShaderProfiles
+	HRESULT UpdatePixelShader(const std::vector<BYTE>& Code, size_t ShaderProfile = 0, ID3DBlob** ErrorMessages = nullptr); 
+
+	bool LoadTexture(const std::vector<BYTE>& Data, size_t Slot);
+
+	bool clearOnDraw = false;
+	float clearColor[4] = { 0, 0, 0, 0 };
 
 private:
 	ComPtr<ID3D12RootSignature> rootSignature;
@@ -48,10 +54,12 @@ private:
 	ComPtr<ID3D12Resource> vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 	ConstantBuffer<CBFrameValues> frameValues;
-	std::vector<Texture> textues;
+	std::vector<Texture> textures;
 
 	LARGE_INTEGER perfStart, perfFreq;
 
 	ComPtr<ID3DBlob> vertexShader;
 	std::vector<BYTE> psBase; //shader includes
+
+	//std::vector<byte> BuildPixelShader();
 };

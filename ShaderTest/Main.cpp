@@ -37,6 +37,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 	wclass.style = CS_HREDRAW | CS_VREDRAW;
 	wclass.lpfnWndProc = WindowProc;
 	wclass.hInstance = hInstance;
+	wclass.hIcon = wclass.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDR_MAIN_ICON));
 	wclass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wclass.lpszClassName = L"AppWindowClass";
 	wclass.hbrBackground = (HBRUSH)COLOR_WINDOW;
@@ -84,25 +85,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 HWND hDx;
 HWND hEdit;
 HWND hBtn;
+HWND hCombo;
 
-WNDPROC pEditProc;
-LRESULT CALLBACK EditProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK EditProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	if (msg == WM_KEYDOWN)
+	bool isCtrl = (GetKeyState(VK_CONTROL) & 0x8000) > 0;
+
+	switch (message)
 	{
-		bool isCtrl = (GetKeyState(VK_CONTROL) & 0x8000) > 0;
-		
-		if (isCtrl && wParam == 'A')
+	case WM_CHAR:
+		if (isCtrl && wParam == 1)
+		{
 			SendMessage(hWnd, EM_SETSEL, 0, -1);
-		else if (isCtrl && wParam == VK_RETURN)
+			return 1;
+		}
+		else if (isCtrl && wParam == '\n')
 		{
 			SendMessage(hBtn, BM_CLICK, 0, 0);
+			SetFocus(hWnd);
 			return 0;
 		}
+		break;
 	}
-	return CallWindowProc(pEditProc, hWnd, msg, wParam, lParam);
+
+	return DefSubclassProc(hWnd, message, wParam, lParam);
 }
-#define BUTTON_ID 0x8801
+
+#define PS_UPDATE_BUTTON_ID 0x8801
+#define PS_PROFILE_COMBO_ID 0x8802
 
 UINT sidebarWidth = 400;
 UINT margin = 10;
@@ -151,7 +161,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 			{
 				HMODULE module = GetModuleHandle(NULL);
-				HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_TEXTFILE_PSH), MAKEINTRESOURCE(TEXTFILE));
+				HRSRC rc = FindResource(module, MAKEINTRESOURCE(IDR_PSH), MAKEINTRESOURCE(TEXTFILE));
 				HGLOBAL rcd = LoadResource(module, rc);
 				DWORD sz = SizeofResource(module, rc);
 				auto data = LockResource(rcd);
@@ -160,13 +170,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				hEdit = CreateWindowEx
 				(
 					WS_EX_CLIENTEDGE,
-					L"EDIT",
+					WC_EDIT,
 					wstr.c_str(),
-					WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
+					WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN,
+					0,
+					0,
+					0,
+					0,
 					hWnd,
 					NULL,
 					hinst,
@@ -174,25 +184,40 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				);
 				FreeResource(rcd);
 
-				//add custom window procedure for additional features
-				pEditProc = (WNDPROC)SetWindowLongPtr(hEdit, GWLP_WNDPROC, (LONG_PTR)&EditProc);
-
-				SendMessage(hEdit, WM_SETFONT, (WPARAM)hDefaultFont, MAKELPARAM(FALSE, 0));
+				auto font = CreateFont
+				(
+					16,
+					0, 
+					0,
+					0,
+					FW_NORMAL, 
+					FALSE, 
+					FALSE, 
+					FALSE,
+					DEFAULT_CHARSET, 
+					OUT_DEFAULT_PRECIS,
+					CLIP_DEFAULT_PRECIS,
+					CLEARTYPE_QUALITY,
+					DEFAULT_PITCH | FF_ROMAN,
+					L"Consolas"
+				);
+				SendMessage(hEdit, WM_SETFONT, (WPARAM)font, MAKELPARAM(FALSE, 0));
+				SetWindowSubclass(hEdit, EditProc, 0, 0);
 			}
 
 			{
 				hBtn = CreateWindowEx
 				(
 					0,
-					L"BUTTON",
+					WC_BUTTON,
 					L"Update",
 					WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
-					CW_USEDEFAULT,
+					0,
+					0,
+					0,
+					0,
 					hWnd,
-					(HMENU)BUTTON_ID,
+					(HMENU)PS_UPDATE_BUTTON_ID,
 					hinst,
 					nullptr
 				);
@@ -204,10 +229,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					TOOLTIPS_CLASS,
 					nullptr,
 					WS_POPUP,
-					CW_USEDEFAULT, 
-					CW_USEDEFAULT,
-					CW_USEDEFAULT, 
-					CW_USEDEFAULT,
+					0, 
+					0,
+					0, 
+					0,
 					hBtn,
 					NULL,
 					hinst,
@@ -225,6 +250,32 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				SendMessage(hTip, TTM_ADDTOOL, 0, (LPARAM)&tool);
 			}
 
+			{
+				hCombo = CreateWindowEx
+				(
+					0,
+					WC_COMBOBOX,
+					L"",
+					WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWN,
+					0,
+					0,
+					0,
+					0,
+					hWnd,
+					(HMENU)PS_PROFILE_COMBO_ID,
+					hinst,
+					nullptr
+				);
+				SendMessage(hCombo, WM_SETFONT, (WPARAM)hDefaultFont, MAKELPARAM(FALSE, 0));
+
+				for (size_t i = 0; i < DXManager::NumPixelShaderProfiles; i++)
+					SendMessageA(hCombo, CB_ADDSTRING, 0, (LPARAM)DXManager::PixelShaderProfiles[i]);
+
+				SendMessage(hCombo, CB_SETCURSEL, 0, 0);
+			}
+
+			SetFocus(hEdit);
+
 			break;
 		}
 
@@ -233,25 +284,28 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			auto width = LOWORD(lParam);
 			auto height = HIWORD(lParam);
 
-			auto editHeight = height - (margin * 3) - buttonHeight;
+			auto editHeight = height - (margin * 4) - (buttonHeight * 2);
 
 			SetWindowPos(hEdit, NULL, margin, margin, sidebarWidth - (margin * 2), editHeight, SWP_NOOWNERZORDER);
 			SetWindowPos(hBtn, NULL, margin, editHeight + (margin * 2), sidebarWidth - (margin * 2), buttonHeight, SWP_NOOWNERZORDER);
+			SetWindowPos(hCombo, NULL, margin, editHeight + buttonHeight + (margin * 3), sidebarWidth - (margin * 2), buttonHeight, SWP_NOOWNERZORDER);
 
 			SetWindowPos(hDx, NULL, sidebarWidth, 0, width - sidebarWidth, height, SWP_NOOWNERZORDER);
 			break;
 		}
 
 	case WM_COMMAND:
-		if (LOWORD(wParam) == BUTTON_ID)
+		if (LOWORD(wParam) == PS_UPDATE_BUTTON_ID)
 		{
 			EnableWindow(hEdit, false);
 
+			auto selection = (DWORD)SendMessage(hCombo, CB_GETCURSEL, 0, 0);
+			
 			auto tLen = GetWindowTextLength(hEdit) + 1;
 			std::vector<BYTE> data (tLen);
 			size_t written = SendMessageA(hEdit, WM_GETTEXT, tLen, (LPARAM)data.data());
 			ComPtr<ID3DBlob> errors;
-			auto hr = app.UpdatePixelShader(data, &errors);
+			auto hr = app.UpdatePixelShader(data, selection, &errors);
 			if (!SUCCEEDED(hr))
 			{
 				if (errors != nullptr)

@@ -45,7 +45,7 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="Resources.hpp">
-      <Filter>Core</Filter>
+      <Filter>Resources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -55,24 +55,32 @@
     <Filter Include="DX">
       <UniqueIdentifier>{854b65bf-b0f5-46e9-9f5a-4ff5a320c9d5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders">
+    <Filter Include="Resources">
       <UniqueIdentifier>{1ce93d41-0d3a-474b-8455-e9204b416afd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="PixelShaderBase.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Resources</Filter>
     </None>
     <None Include="VertexShader.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Resources</Filter>
     </None>
     <None Include="PixelShader.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Resources</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc">
-      <Filter>Core</Filter>
+      <Filter>Resources</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Sample.png">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="Icon.ico">
+      <Filter>Resources</Filter>
+    </Image>
   </ItemGroup>
 </Project>
