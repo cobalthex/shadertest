@@ -15,10 +15,6 @@ cbuffer CBFrameValues : register(b0)
 	float Time; //in seconds
 };
 
-#define MAX_TEXTURES 32
-
-Texture2D Textures[MAX_TEXTURES]; //todo: dynamically generate
-
 sampler SLinearClamp = sampler_state
 {
 	addressU = Clamp;
@@ -27,3 +23,7 @@ sampler SLinearClamp = sampler_state
 	minfilter = LINEAR;
 	magfilter = LINEAR;
 };
+
+#define MAX_TEXTURES {{MaxTextures}}
+
+Texture2D Textures[MAX_TEXTURES]; //todo: dynamically generate
